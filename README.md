@@ -1,6 +1,7 @@
 # Political Filter
 
-
+A recurrent neural network which filters your twitter timeline for political agendas from
+the left or the right
 
 ## Getting Started
 
