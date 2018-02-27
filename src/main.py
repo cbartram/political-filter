@@ -12,6 +12,8 @@ from six.moves import xrange
 
 import numpy as np
 import tensorflow as tf
+import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
 
 DOWNLOADED_FILENAME = '/Users/ilp281/PycharmProjects/political-filter/SampleText.zip'
 
@@ -114,9 +116,36 @@ def generate_batch(word_indexes, batch_size, num_skips, skip_window):
     return batch, labels
 
 
-# Execute methods defined above
+def save_word_embeddings(embeddings, word_counts):
+    np.save('embeddings.npy', embeddings)
 
-VOCABULARY_SIZE = 5000
+    words = [x[0] for x in word_counts]
+    np.save('words.npy', words)
+
+
+def plot_with_labels(low_dim_embs, labels, filename='tsne.png'):
+    assert low_dim_embs.shape[0] >= len(labels), 'There are more labels then embeddings'
+
+    plt.figure(figsize=(18, 18))
+
+    for l, label in enumerate(labels):
+        x, y = low_dim_embs[l, :]
+
+        plt.scatter(x,y)
+
+        plt.annotate(label,
+                     xy=(x, y),
+                     xytext=(5, 2),
+                     textcoords='offset points',
+                     ha='right',
+                     va='bottom')
+
+        plt.savefig(filename)
+        plt.show(filename)
+
+
+# Execute methods defined above
+VOCABULARY_SIZE = 10000
 URL_PATH = "http://mattmahoney.net/dc/text8.zip"
 FILESIZE = 31344016
 
@@ -139,6 +168,10 @@ valid_window = 100
 
 valid_examples = np.random.choice(valid_window, valid_size, replace=False)
 
+# Number of corrupted sample pairs to pass into the NCE
+num_samples = 64
+
+# Hyper parameters
 batch_size = 128
 embedding_size = 50
 skip_window = 2
@@ -158,14 +191,17 @@ embeddings = tf.Variable(tf.random_uniform([VOCABULARY_SIZE, embedding_size], -1
 embed = tf.nn.embedding_lookup(embeddings, train_inputs)
 
 # NN Layer with no activation function (linear layer)
-weights = tf.Variable(tf.truncated_normal([VOCABULARY_SIZE, embedding_size], stddev=1.0 / math.sqrt(embedding_size)))
-biases = tf.Variable(tf.zeros([VOCABULARY_SIZE]))
+nce_weights = tf.Variable(tf.truncated_normal([VOCABULARY_SIZE, embedding_size], stddev=1.0 / math.sqrt(embedding_size)))
+nce_biases = tf.Variable(tf.zeros([VOCABULARY_SIZE]))
 
-hidden_out = tf.matmul(embed, tf.transpose(weights)) + biases
+loss = tf.reduce_mean(tf.nn.nce_loss(
+    weights=nce_weights,
+    biases=nce_biases,
+    labels=train_labels,
+    inputs=embed,
+    num_sampled=num_samples,
+    num_classes=VOCABULARY_SIZE))
 
-train_one_hot = tf.one_hot(train_labels, VOCABULARY_SIZE)
-# Determines probability if the output is true or false (2 probabilities)
-loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=hidden_out, labels=train_one_hot))
 optimizer = tf.train.GradientDescentOptimizer(0.1).minimize(loss)
 
 # L2 Norm is the sqrt of the sum of the squares of a vector
@@ -179,16 +215,19 @@ similarity = tf.matmul(valid_embeddings, normalized_embeddings, transpose_b=True
 
 # Initialize and train
 init = tf.global_variables_initializer()
-num_steps = 20001 # num of epochs in training
+num_steps = 200001 # num of epochs in training
 
 with tf.Session() as session:
     init.run()
 
     average_loss = 0
     for step in xrange(num_steps):
+
+        # Compute tf.placeholder variables at runtime
         batch_inputs, batch_labels = generate_batch(word_indexes, batch_size, num_skips, skip_window)
 
-        feed_dict = {train_inputs: batch_inputs, train_labels: batch_labels}
+        _, loss_val = session.run([optimizer, loss], feed_dict={train_inputs: batch_inputs, train_labels: batch_labels})
+        average_loss += loss_val
 
         # Calculate avg loss every 2,000 steps
         if step % 2000 == 0:
@@ -213,5 +252,16 @@ with tf.Session() as session:
                     close_word = reversed_dictionary[nearest[k]]
                     log_str = '%s %s,' % (log_str, close_word)
                 print(log_str)
+
+    final_embeddings = normalized_embeddings.eval()
+    save_word_embeddings(final_embeddings, word_counts)
+
+    NUM_PLOT_POINTS = 500
+    # Dimensionality reduction algorithm
+    tsne = TSNE(perplexity=30, n_components=2, init='pca', n_iter=5000, method='exact')
+    low_dim_embs = tsne.fit_transform(final_embeddings[:NUM_PLOT_POINTS, :])
+    labels_final = [reversed_dictionary[i] for i in xrange(NUM_PLOT_POINTS)]
+
+    plot_with_labels(low_dim_embs, labels_final)
 
 
