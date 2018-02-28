@@ -129,23 +129,34 @@ def get_reviews(dirname, positive=True):
 
 def get_tweets(political=True):
     file_path = ""
-    tweets = [] # The tweet text
-    labels = [] # The label text (is or isnt political)
+    tweets = []  # The tweet text
+    labels_features = []  # The label text (is or isnt political)
+
+    label = 1 if political else 0
 
     if political:
         file_path = "./political/tweets.csv"
     else:
         file_path = "./non_political/tweets.csv"
 
-
-    # Open file
+    #  Open file and read lines
     with open(file_path, "r+") as f:
-        tweet = f.read()
+        for line in f:
+            tweets.append(line)
+            labels_features.append(label)
 
+    return tweets, labels_features
 
 
 def extract_twitter_data():
-    return True
+    political_tweets, political_labels = get_tweets(political=True)
+    non_political_tweets, non_political_labels = get_tweets(political=False)
+
+    data_ret = political_tweets + non_political_tweets
+    labels_ret = political_labels + non_political_labels
+
+    return data_ret, labels_ret
+
 
 def extract_labels_data():
     # if the file hasnt been extracted yet
@@ -162,8 +173,10 @@ def extract_labels_data():
 
     return labels3, data2
 
-download_file("http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz")
-labels, data = extract_labels_data()
+
+print("Extracting Twitter Data")
+# download_file("http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz")
+labels, data = extract_twitter_data()
 
 # Map each word in dataset to unique numeric identifier (Truncates and pads documents of less than or greater than 250)
 vocab_processor = tf.contrib.learn.preprocessing.VocabularyProcessor(MAX_SEQUENCE_LENGTH)
