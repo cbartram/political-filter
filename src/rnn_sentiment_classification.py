@@ -8,15 +8,18 @@ import os
 import random
 import tarfile
 import re
-
 from six.moves import urllib
 
 import numpy as np
 import matplotlib as mp
 import matplotlib.pyplot as plt
 import tensorflow as tf
-import twitter
 import json
+import sys
+
+from tweepy.streaming import StreamListener
+from tweepy import OAuthHandler
+from tweepy import Stream
 
 
 
@@ -30,28 +33,75 @@ TOKEN_REGEX = re.compile("[^A-Za-z0-9 ]+")
 
 # Init Twitter API
 print("Initializing Twitter API")
-api = twitter.Api(consumer_key="zNKTkmUiKMwwp3zdUA8daiVHX",
-                  consumer_secret="ORvVnkv7Y3d9KotlYKpXz4W5Y2Wqx9mWc7U7O0S2ymiIV2aAeA",
-                  access_token_key="480819238-CQ95qCrHjEXdDzyEGnIZFMXoox4OtX3I0FFg9pBp",
-                  access_token_secret="JJWIb2Yio64C0hNCwKa8KNaNoqEoxzn02Tyx4LxVY2OVN")
-
-results = api.GetSearch(
-    raw_query="q=twitter%20&result_type=recent&since=2014-07-19&count=100")
-
-dump = json.dumps(results[99]._json)
-load = json.loads(dump)
 
 
-# For each read tweet write to disk
-def tweet_to_disk(api_response):
-    for tweet in api_response:
-        tweet = tweet._json
-        loaded_tweet = json.loads(tweet._json)
-        # print(loaded_tweet["text"])
+# Variables that contains the user credentials to access Twitter API
+access_token = "480819238-CQ95qCrHjEXdDzyEGnIZFMXoox4OtX3I0FFg9pBp"
+access_token_secret = "JJWIb2Yio64C0hNCwKa8KNaNoqEoxzn02Tyx4LxVY2OVN"
+consumer_key = "zNKTkmUiKMwwp3zdUA8daiVHX"
+consumer_secret = "ORvVnkv7Y3d9KotlYKpXz4W5Y2Wqx9mWc7U7O0S2ymiIV2aAeA"
 
 
+# This is a basic listener that just prints received tweets to stdout.
+class StdOutListener(StreamListener):
+    tweets = []
+    count = 0
 
-tweet_to_disk(results)
+    def on_data(self, data):
+        if self.count == 5815:
+            sys.exit()
+
+        if "text" in json.loads(data):
+            self.tweets.append(json.loads(data)["text"])
+
+        # Write to disk in batches of 100
+        if len(self.tweets) % 100 == 0:
+            print("Writing tweets to disk")
+            self.tweet_to_disk(self.tweets)
+            self.tweets = []
+            self.count += 100
+
+        return True
+
+    def on_error(self, status):
+        print(status)
+
+    # For each read tweet write to disk
+    @staticmethod
+    def tweet_to_disk(tweets):
+        filtered_tweets = []
+
+        # Filter all the tweets
+        for tweet in tweets:
+            tweet = tweet.lower().replace("<br />", " ")
+            tweet = tweet.lower().replace("&amp;", " ")
+            tweet = tweet.lower().replace("rt", "")
+            tweet = tweet.strip(' \t\n\r')
+            tweet = re.sub(TOKEN_REGEX, '', tweet)
+
+            if "http" in tweet:
+                tweet = tweet[:tweet.index("http")]
+
+            if len(tweet) > 0:
+                filtered_tweets.append(tweet)
+
+        # Write text to disk
+        with open("./political/tweets.csv", "a") as text_file:
+            for tweet in filtered_tweets:
+                print("Writing tweet -> " + tweet)
+                text_file.write(tweet + ",\n")
+
+        print("Written to Disk")
+
+
+# l = StdOutListener()
+# auth = OAuthHandler(consumer_key, consumer_secret)
+# auth.set_access_token(access_token, access_token_secret)
+# stream = Stream(auth, l)
+
+# This line filter Twitter Streams to capture data by the keywords passed into track
+# Political ['trump', 'clinton', 'obama', 'tax', 'parkland', 'gun control', 'senate', 'rubio']
+# stream.filter(track=['trump', 'clinton', 'obama', 'tax', 'parkland', 'gun control', 'senate', 'rubio'])
 
 
 def download_file(url_path):
@@ -75,6 +125,27 @@ def get_reviews(dirname, positive=True):
                 reviews.append(review)
                 labels2.append(label)
     return reviews, labels2
+
+
+def get_tweets(political=True):
+    file_path = ""
+    tweets = [] # The tweet text
+    labels = [] # The label text (is or isnt political)
+
+    if political:
+        file_path = "./political/tweets.csv"
+    else:
+        file_path = "./non_political/tweets.csv"
+
+
+    # Open file
+    with open(file_path, "r+") as f:
+        tweet = f.read()
+
+
+
+def extract_twitter_data():
+    return True
 
 def extract_labels_data():
     # if the file hasnt been extracted yet
