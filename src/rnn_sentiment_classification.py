@@ -167,4 +167,3 @@ with tf.Session() as session:
     save_path = saver.save(session, "../checkpoint/ltsm_rnn.ckpt")
     print("Model saved in path: %s" % save_path)
 
-

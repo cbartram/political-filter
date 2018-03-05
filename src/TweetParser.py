@@ -1,6 +1,7 @@
 """
  TweetParser - This class reads tweets from disk and formats them (and labels) as an array
  @author cbartram
+
 """
 class TweetParser:
     tweet = []

@@ -3,7 +3,6 @@ from flask import Flask
 from flask import request
 import tensorflow as tf
 import numpy as np
-import json
 
 app = Flask(__name__)
 

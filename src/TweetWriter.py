@@ -7,6 +7,7 @@ from tweepy.streaming import StreamListener
 """
 Tweet Writer - Preprocess's tweets for valid text and writes them to disk
 @author Cbartram
+
 """
 class TweetWriter(StreamListener):
     tweets = []

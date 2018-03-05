@@ -131,13 +131,3 @@ with tf.Session() as session:
     print("Model saved in path: %s" % save_path)
 
 
-def predict(sentences):
-    with tf.Session() as sess:
-        init.run()
-
-        test_dictionary = {x: test_data, y: test_target}
-        test_loss, test_acc = sess.run([loss, accuracy], feed_dict=test_dictionary)
-
-        print('Test Loss: {:.2}, Test Acc: {:.5}'.format(test_loss, test_acc))
-
-

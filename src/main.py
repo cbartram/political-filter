@@ -81,8 +81,6 @@ def build_dataset(words, n_words):
  
  Num skips is the number of words we will use surrounding the target word
 """
-
-
 def generate_batch(word_indexes, batch_size, num_skips, skip_window):
     global global_index
     assert batch_size % num_skips == 0
