@@ -54,9 +54,9 @@ class TweetWriter(StreamListener):
         filtered_tweets = []
 
         if political:
-            path = "./political/tweets.csv"
+            path = "../data/political/tweets.csv"
         else:
-            path = "./non_political/tweets.csv"
+            path = "../data/non_political/tweets.csv"
 
             # Filter all the tweets
         for tweet in tweets:

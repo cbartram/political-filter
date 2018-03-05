@@ -1,4 +1,3 @@
-
 """
  TweetParser - This class reads tweets from disk and formats them (and labels) as an array
  @author cbartram
@@ -10,8 +9,8 @@ class TweetParser:
         self.tweet = []
 
     def extract_twitter_data(self):
-        political_tweets, political_labels = self.__get_tweets(political=True)
-        non_political_tweets, non_political_labels = self.__get_tweets(political=False)
+        political_tweets, political_labels = self.get_tweets(political=True)
+        non_political_tweets, non_political_labels = self.get_tweets(political=False)
 
         data_ret = political_tweets + non_political_tweets
         labels_ret = political_labels + non_political_labels
@@ -23,16 +22,16 @@ class TweetParser:
      as lists
     """
     @staticmethod
-    def __get_tweets(political=True):
+    def get_tweets(political=True):
         tweets = []  # The tweet text
         labels_features = []  # The label text (is or isnt political)
 
         label = 1 if political else 0
 
         if political:
-            file_path = "./political/tweets.csv"
+            file_path = "../data/political/tweets.csv"
         else:
-            file_path = "./non_political/tweets.csv"
+            file_path = "../data/non_political/tweets.csv"
 
         #  Open file and read lines
         with open(file_path, "r+") as f:
@@ -41,5 +40,3 @@ class TweetParser:
                 labels_features.append(label)
 
         return tweets, labels_features
-
-

@@ -14,6 +14,7 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
+from src.TweetParser import TweetParser
 
 DOWNLOADED_FILENAME = '/Users/ilp281/PycharmProjects/political-filter/SampleText.zip'
 
@@ -33,9 +34,8 @@ def maybe_download(url_path, expected_bytes):
 
 
 def read_words():
-    with zipfile.ZipFile(DOWNLOADED_FILENAME) as f:
+    with zipfile.ZipFile("../text8.zip") as f:
         firstfile = f.namelist()[0]
-        # Convert contents into string format
         filestring = tf.compat.as_str(f.read(firstfile))
         words = filestring.split()
     return words
@@ -49,9 +49,9 @@ def build_dataset(words, n_words):
 
     dictionary = dict()
 
-    # Stor mapping of word to index variable
+    # Store mapping of word to index variable
     for word, _ in word_counts:
-        # Assign unique indeces to words; most common words have lowest index values
+        # Assign unique index's to words; most common words have lowest index values
         # {"all": 253, "the": 3}
         dictionary[word] = len(dictionary)
 
@@ -62,7 +62,7 @@ def build_dataset(words, n_words):
         if word in dictionary:
             index = dictionary[word]
         else:
-            index = 0 # Dictionary['unknown']
+            index = 0  # Dictionary['unknown']
             unknown_count += 1
 
         word_indexes.append(index)
@@ -73,6 +73,7 @@ def build_dataset(words, n_words):
 
     return word_counts, word_indexes, dictionary, reversed_dictionary
 
+
 """
  Skip window is the window for how many words we should predict to the left & right of the 
  word index i.e. "The quick brown fox jumped over the lazy brown dog" with skip_window 3 and word_index fox 
@@ -80,6 +81,8 @@ def build_dataset(words, n_words):
  
  Num skips is the number of words we will use surrounding the target word
 """
+
+
 def generate_batch(word_indexes, batch_size, num_skips, skip_window):
     global global_index
     assert batch_size % num_skips == 0
@@ -97,7 +100,7 @@ def generate_batch(word_indexes, batch_size, num_skips, skip_window):
         global_index = (global_index + 1) % len(word_indexes)
 
     for i in range(batch_size // num_skips):
-        target = skip_window # input word at the center of the buffer (deque)
+        target = skip_window  # input word at the center of the buffer (deque)
         targets_to_avoid = [skip_window]
 
         for j in range(num_skips):
@@ -131,7 +134,7 @@ def plot_with_labels(low_dim_embs, labels, filename='tsne.png'):
     for l, label in enumerate(labels):
         x, y = low_dim_embs[l, :]
 
-        plt.scatter(x,y)
+        plt.scatter(x, y)
 
         plt.annotate(label,
                      xy=(x, y),
@@ -149,7 +152,7 @@ VOCABULARY_SIZE = 10000
 URL_PATH = "http://mattmahoney.net/dc/text8.zip"
 FILESIZE = 31344016
 
-maybe_download(URL_PATH, FILESIZE)
+# maybe_download(URL_PATH, FILESIZE)
 
 # 17 Million words in our dataset
 vocabulary = read_words()
@@ -177,7 +180,6 @@ embedding_size = 50
 skip_window = 2
 num_skips = 2
 
-
 # Build fresh tensor graph
 tf.reset_default_graph()
 
@@ -191,7 +193,8 @@ embeddings = tf.Variable(tf.random_uniform([VOCABULARY_SIZE, embedding_size], -1
 embed = tf.nn.embedding_lookup(embeddings, train_inputs)
 
 # NN Layer with no activation function (linear layer)
-nce_weights = tf.Variable(tf.truncated_normal([VOCABULARY_SIZE, embedding_size], stddev=1.0 / math.sqrt(embedding_size)))
+nce_weights = tf.Variable(
+    tf.truncated_normal([VOCABULARY_SIZE, embedding_size], stddev=1.0 / math.sqrt(embedding_size)))
 nce_biases = tf.Variable(tf.zeros([VOCABULARY_SIZE]))
 
 loss = tf.reduce_mean(tf.nn.nce_loss(
@@ -215,7 +218,7 @@ similarity = tf.matmul(valid_embeddings, normalized_embeddings, transpose_b=True
 
 # Initialize and train
 init = tf.global_variables_initializer()
-num_steps = 200001 # num of epochs in training
+num_steps = 200001  # num of epochs in training
 
 with tf.Session() as session:
     init.run()
@@ -243,7 +246,7 @@ with tf.Session() as session:
 
             for i in xrange(valid_size):
                 valid_word = reversed_dictionary[valid_examples[i]]
-                top_k = 8 # Number of nearest neighbors
+                top_k = 8  # Number of nearest neighbors
 
                 nearest = (-sim[i, :]).argsort()[1:top_k + 1]
                 log_str = "Nearest to %s:" % valid_word
@@ -263,5 +266,3 @@ with tf.Session() as session:
     labels_final = [reversed_dictionary[i] for i in xrange(NUM_PLOT_POINTS)]
 
     plot_with_labels(low_dim_embs, labels_final)
-
-

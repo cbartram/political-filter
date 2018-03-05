@@ -2,10 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import collections
-import math
 import os
-import random
 import tarfile
 import re
 from six.moves import urllib
@@ -21,8 +18,7 @@ from src.TweetWriter import TweetWriter
 from src.TweetParser import TweetParser
 
 
-DOWNLOADED_FILENAME = "../ImdbReviews.tar.gz"
-MAX_SEQUENCE_LENGTH = 100 # The number of of words to consider in each review, extend shorter reviews truncate longer reviews
+MAX_SEQUENCE_LENGTH = 50 # The number of of words to consider in each review, extend shorter reviews truncate longer reviews
 
 # Regex to only accept text and numbers
 TOKEN_REGEX = re.compile("[^A-Za-z0-9 ]+")
@@ -42,21 +38,14 @@ tweet_writer = TweetWriter()
 # Set which file to write to (political or non political)
 tweet_writer.set_tweet_category(True) # True = political False = non political
 
-auth = OAuthHandler(consumer_key, consumer_secret)
-auth.set_access_token(access_token, access_token_secret)
-stream = Stream(auth, tweet_writer)
+# auth = OAuthHandler(consumer_key, consumer_secret)
+# auth.set_access_token(access_token, access_token_secret)
+# stream = Stream(auth, tweet_writer)
 
 # This line filter Twitter Streams to capture data by the keywords passed into track
 # Political categories ['trump', 'clinton', 'obama', 'tax', 'parkland', 'gun control', 'senate', 'rubio']
 # Non Political categories ['football', 'nfl', 'gains', 'gym', 'cars', 'fishing', 'painting', 'music', 'apple', 'iphone']
-stream.filter(track=['trump', 'clinton', 'obama', 'tax', 'parkland', 'gun control', 'senate', 'rubio'])
-
-
-def download_file(url_path):
-    if not os.path.exists(DOWNLOADED_FILENAME):
-        filename, _ = urllib.request.urlretrieve(url_path, DOWNLOADED_FILENAME)
-    print("Found and verified IMDB Movie Reviews ")
-
+# stream.filter(track=['trump', 'clinton', 'obama', 'tax', 'parkland', 'gun control', 'senate', 'rubio'])
 
 def get_reviews(dirname, positive=True):
     label = 1 if positive else 0
@@ -75,26 +64,7 @@ def get_reviews(dirname, positive=True):
     return reviews, labels2
 
 
-
-
-def extract_labels_data():
-    # if the file hasnt been extracted yet
-    if not os.path.exists('aclImdb'):
-        with tarfile.open(DOWNLOADED_FILENAME) as tar:
-            tar.extractall()
-            tar.close()
-
-    positive_reviews, positive_labels = get_reviews("aclImdb/train/pos/", positive=True)
-    negative_reviews, negative_labels = get_reviews("aclImdb/train/neg/", positive=False)
-
-    data2 = positive_reviews + negative_reviews
-    labels3 = positive_labels + negative_labels
-
-    return labels3, data2
-
-
 print("Extracting Twitter Data")
-download_file("http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz")
 labels, data = TweetParser().extract_twitter_data()
 
 # Map each word in dataset to unique numeric identifier (Truncates and pads documents of less than or greater than 250)
@@ -111,8 +81,8 @@ x_shuffled = x_data[shuffle_indices]
 y_shuffled = y_output[shuffle_indices]
 
 # Increasing training data set to improve accuracy
-TRAIN_DATA = 5000
-TOTAL_DATA = 6000
+TRAIN_DATA = 15000
+TOTAL_DATA = 17000
 
 train_data = x_shuffled[:TRAIN_DATA]
 train_target = y_shuffled[:TRAIN_DATA]
@@ -129,7 +99,7 @@ y = tf.placeholder(tf.int32, [None])  # Labels
 # Setup NN
 
 # Hyper parameters
-num_epochs = 20  # very small
+num_epochs = 25  # very small
 batch_size = 25 # 25 elements per batch
 embedding_size = 50
 max_label = 2  # Only possible values are 0,1 so max label = 2
@@ -169,6 +139,9 @@ train_step = optimizer.minimize(loss)
 # Training the NN
 init = tf.global_variables_initializer()
 
+# Save the model
+saver = tf.train.Saver()
+
 with tf.Session() as session:
     init.run()
 
@@ -190,5 +163,8 @@ with tf.Session() as session:
         test_dict = {x: test_data, y: test_target}
         test_loss, test_acc = session.run([loss, accuracy], feed_dict=test_dict)
         print('Epoch: {}, Test Loss: {:.2}, Test Acc: {:.5}'.format(epoch + 1, test_loss, test_acc))
+
+    save_path = saver.save(session, "../checkpoint/ltsm_rnn.ckpt")
+    print("Model saved in path: %s" % save_path)
 
 
