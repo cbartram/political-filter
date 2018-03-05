@@ -1,0 +1,2 @@
+model_checkpoint_path: "ltsm_rnn.ckpt"
+all_model_checkpoint_paths: "ltsm_rnn.ckpt"
