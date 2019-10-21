@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 from src.TweetParser import TweetParser
 
-DOWNLOADED_FILENAME = '/Users/ilp281/PycharmProjects/political-filter/SampleText.zip'
+DOWNLOADED_FILENAME = '~/political-filter/SampleText.zip'
 
 
 def maybe_download(url_path, expected_bytes):
