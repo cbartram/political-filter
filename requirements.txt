@@ -22,7 +22,7 @@ googleapis-common-protos==1.5.3
 html5lib==0.9999999
 idna==2.6
 itsdangerous==0.24
-Jinja2==2.10
+Jinja2==2.11.3
 langdetect==1.0.7
 macholib==1.5.1
 Markdown==2.6.11
